@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -eux
+
+apt-get update && apt-get install -y python3-minimal
+
+repo_root=$(dirname "${BASH_SOURCE[0]}")/../..
+pushd $repo_root
+  virtualenv -ppython3 .venv
+  set +u; . .venv/bin/activate; set -u
+  pip install -e .
+  python -m unittest discover tests/
+popd
