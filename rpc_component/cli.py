@@ -4,6 +4,7 @@ import argparse
 from collections import defaultdict
 from copy import deepcopy
 import os
+import re
 import sys
 from tempfile import TemporaryDirectory
 
@@ -24,14 +25,13 @@ def component(releases_dir, components_dir, subparser, **kwargs):
             component_name, components_dir
         )
     elif subparser == "add":
+        import_releases = kwargs.pop("import_releases", [])
         try:
             component = c_lib.Component.from_file(
                 component_name, components_dir
             )
         except c_lib.ComponentError:
-            component = c_lib.Component(
-                name=component_name, directory=components_dir, **kwargs
-            )
+            pass
         else:
             raise c_lib.ComponentError(
                 "Component '{name}' already exists.".format(
@@ -39,15 +39,32 @@ def component(releases_dir, components_dir, subparser, **kwargs):
                 )
             )
 
-        try:
-            with TemporaryDirectory() as tmp_dir:
-                git.Repo.clone_from(
-                    c_lib.git_http_to_ssh(component.repo_url), tmp_dir
+        ssh_url = c_lib.git_http_to_ssh(kwargs["repo_url"])
+        with TemporaryDirectory() as tmp_dir:
+            try:
+                repo = git.Repo.clone_from(ssh_url, tmp_dir)
+            except FileNotFoundError as e:
+                raise c_lib.ComponentError(
+                    "The repo_url provided is inaccessible, please check."
                 )
-        except FileNotFoundError as e:
-            raise c_lib.ComponentError(
-                "The repo_url provided is inaccessible, please check."
-            )
+            else:
+                repo.remotes.origin.fetch()
+                releases = []
+                for each in import_releases:
+                    series, tag_regex = each.split(":", 1)
+                    for tag in repo.tags:
+                        if re.search(tag_regex, tag.name):
+                            releases.append(
+                                {
+                                    "version": tag.name,
+                                    "sha": str(tag.commit),
+                                    "series": series,
+                                }
+                            )
+        component = c_lib.Component(
+            name=component_name, directory=components_dir,
+            releases=releases, **kwargs
+        )
     elif subparser == "update":
         component = c_lib.Component.from_file(
             component_name, components_dir
@@ -282,6 +299,20 @@ def parse_args(args):
         help="Component repository URL.",
     )
     ca_parser.add_argument("--is-product", action="store_true", default=False)
+    ca_parser.add_argument(
+        "--import-releases",
+        action="append",
+        default=[],
+        help=(
+            "If a repository has existing tags, these can be import with this"
+            " argument. Releases correspond to a series, the simplest option"
+            " is to assign them all to one series e.g."
+            " --import-releases 'master:.+'. Alternatively the option can be"
+            " used multiple times to split the tags between different series"
+            " e.g. --import-releases 'first:^1\.'"
+            " --import-releases 'second:^2\.'."
+        ),
+    )
 
     cu_parser = subparsers.add_parser("update")
     cu_parser.add_argument(
