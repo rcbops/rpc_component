@@ -46,7 +46,7 @@ class Component(yaml.YAMLObject):
             self.get_release(version)
         except ComponentError:
             releases = self.releases + [release]
-            self.releases = sorted(releases)
+            self.releases = sorted(releases, reverse=True)
         else:
             raise ComponentError(
                 "Release with version {v} already exists.".format(v=version)
@@ -55,7 +55,7 @@ class Component(yaml.YAMLObject):
     def get_release(self, version, predecessor=False):
         if predecessor:
             pred = None
-            for r in self.releases:
+            for r in reversed(self.releases):
                 if r.version == version:
                     if pred:
                         release = pred
@@ -361,7 +361,7 @@ def build_constraint_checker(constraints):
 
 def requirement_from_version_constraints(component, constraints):
     meets_constraints = build_constraint_checker(constraints)
-    for release in reversed(component.releases):
+    for release in component.releases:
         if meets_constraints(release.version):
             requirement = {
                 "name": component.name,

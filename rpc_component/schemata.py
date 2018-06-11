@@ -5,7 +5,11 @@ from schema import And, Optional, Or, Regex, Schema
 
 
 def sorted_versions(versions):
-    return sorted(versions, key=lambda v: version_key(v["version"]))
+    return sorted(
+        versions,
+        key=lambda v: version_key(v["version"]),
+        reverse=True,
+    )
 
 
 def is_sorted_versions(versions):
