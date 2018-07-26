@@ -1,3 +1,4 @@
+import schema
 import unittest
 
 import rpc_component.schemata as schemata
@@ -149,8 +150,130 @@ class TestSchemaValidation(unittest.TestCase):
         )
 
     def test_component_metadata_schema(self):
-        minimal = {"dependencies": []}
-        with_deps = {
+        empty_deps = {
+            "dependencies": []
+        }
+        with_deps_version = {
+            "dependencies": [
+                {
+                    "name": "dep0",
+                    "constraints": ["version<2.0.0"],
+                },
+            ]
+        }
+        with_deps_branch = {
+            "dependencies": [
+                {
+                    "name": "dep1",
+                    "constraints": ["branch==some-branch"],
+                },
+            ]
+        }
+        with_deps_empty = {
+            "dependencies": [
+                {
+                    "name": "dep2",
+                    "constraints": [],
+                },
+            ]
+        }
+        with_deps_multiple = {
+            "dependencies": [
+                {
+                    "name": "dep0",
+                    "constraints": ["version<2.0.0"],
+                },
+                {
+                    "name": "dep1",
+                    "constraints": ["branch==some-branch"],
+                },
+            ]
+        }
+        empty_artifacts = {"artifacts": []}
+        with_artifacts_file = {
+            "artifacts": [
+                {
+                    "type": "file",
+                    "source": "/foo",
+                },
+            ]
+        }
+        with_artifacts_file_expire_integer = {
+            "artifacts": [
+                {
+                    "type": "file",
+                    "source": "/foo",
+                    "dest": "bar",
+                    "expire_after": 300,
+                },
+            ]
+        }
+        with_artifacts_file_expire_string = {
+            "artifacts": [
+                {
+                    "type": "file",
+                    "source": "/foo",
+                    "dest": "bar",
+                    "expire_after": "300",
+                },
+            ]
+        }
+        with_artifacts_file_expire_negative = {
+            "artifacts": [
+                {
+                    "type": "file",
+                    "source": "/foo",
+                    "dest": "bar",
+                    "expire_after": -1,
+                },
+            ]
+        }
+        with_artifacts_file_incomplete = {
+            "artifacts": [
+                {
+                    "type": "file",
+                    "dest": "bar",
+                },
+            ]
+        }
+        with_artifacts_file_unknown = {
+            "artifacts": [
+                {
+                    "type": "file",
+                    "source": "foo",
+                    "unknown": "baz",
+                },
+            ]
+        }
+        with_artifacts_log = {
+            "artifacts": [
+                {
+                    "type": "log",
+                    "source": "/foo",
+                },
+            ]
+        }
+        with_artifacts_log_unknown = {
+            "artifacts": [
+                {
+                    "type": "log",
+                    "dest": "bar",
+                },
+            ]
+        }
+        with_artifacts_file_and_log = {
+            "artifacts": [
+                {
+                    "type": "file",
+                    "source": "/foo",
+                },
+                {
+                    "type": "log",
+                    "source": "/foo",
+                },
+            ]
+        }
+        with_deps_and_artifacts = {
             "dependencies": [
                 {
                     "name": "dep0",
@@ -164,14 +287,87 @@ class TestSchemaValidation(unittest.TestCase):
                     "name": "dep2",
                     "constraints": [],
                 },
+            ],
+            "artifacts": [
+                {
+                    "type": "file",
+                    "source": "/foo",
+                },
+                {
+                    "type": "log",
+                    "source": "/foo"
+                },
             ]
         }
 
         self.assertTrue(
-            schemata.component_metadata_schema.validate(minimal)
+            schemata.component_metadata_schema.validate(
+                empty_deps)
         )
         self.assertTrue(
-            schemata.component_metadata_schema.validate(with_deps)
+            schemata.component_metadata_schema.validate(
+                with_deps_version)
+        )
+        self.assertTrue(
+            schemata.component_metadata_schema.validate(
+                with_deps_branch)
+        )
+        self.assertTrue(
+            schemata.component_metadata_schema.validate(
+                with_deps_empty)
+        )
+        self.assertTrue(
+            schemata.component_metadata_schema.validate(
+                with_deps_multiple)
+        )
+        self.assertTrue(
+            schemata.component_metadata_schema.validate(
+                empty_artifacts)
+        )
+        self.assertTrue(
+            schemata.component_metadata_schema.validate(
+                with_artifacts_file)
+        )
+        self.assertTrue(
+            schemata.component_metadata_schema.validate(
+                with_artifacts_file_expire_integer)
+        )
+        self.assertRaises(
+            schema.SchemaError,
+            schemata.component_metadata_schema.validate,
+            with_artifacts_file_expire_string
+        )
+        self.assertRaises(
+            schema.SchemaError,
+            schemata.component_metadata_schema.validate,
+            with_artifacts_file_expire_negative
+        )
+        self.assertRaises(
+            schema.SchemaError,
+            schemata.component_metadata_schema.validate,
+            with_artifacts_file_incomplete
+        )
+        self.assertRaises(
+            schema.SchemaError,
+            schemata.component_metadata_schema.validate,
+            with_artifacts_file_unknown
+        )
+        self.assertTrue(
+            schemata.component_metadata_schema.validate(
+                with_artifacts_log)
+        )
+        self.assertRaises(
+            schema.SchemaError,
+            schemata.component_metadata_schema.validate,
+            with_artifacts_log_unknown
+        )
+        self.assertTrue(
+            schemata.component_metadata_schema.validate(
+                with_artifacts_file_and_log)
+        )
+        self.assertTrue(
+            schemata.component_metadata_schema.validate(
+                with_deps_and_artifacts)
         )
 
     def test_component_schema(self):
