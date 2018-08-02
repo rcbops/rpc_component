@@ -241,9 +241,16 @@ class ComponentError(Exception):
 
 
 def load_data(filepath):
-    with open(filepath) as f:
-        data = yaml.safe_load(f)
-
+    try:
+        with open(filepath) as f:
+            data = yaml.safe_load(f)
+    except yaml.parser.ParserError as e:
+        raise ComponentError(
+            "Invalid YAML:"
+            "\n{e}\n".format(
+                e=e
+            )
+        )
     return data
 
 

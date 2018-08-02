@@ -200,7 +200,7 @@ def dependency(components_dir, **kwargs):
     dependency_dir = kwargs.pop("dependency_dir")
     metadata_filename = "component_metadata.yml"
     filepath = os.path.join(dependency_dir, metadata_filename)
-    new_metadata = {"dependencies": []}
+    new_metadata = {"artifacts": [], "dependencies": []}
     try:
         metadata = c_lib.load_data(filepath)
     except FileNotFoundError:
@@ -237,6 +237,27 @@ def dependency(components_dir, **kwargs):
     else:
         raise c_lib.ComponentError(
             "The dependency subparser '{sp}' is not recognised.".format(
+                sp=subparser,
+            )
+        )
+
+
+def metadata(components_dir, **kwargs):
+    metadata_dir = kwargs.pop("metadata_dir")
+    metadata_filename = "component_metadata.yml"
+    filepath = os.path.join(metadata_dir, metadata_filename)
+    new_metadata = {"artifacts": [], "dependencies": []}
+    try:
+        metadata = c_lib.load_data(filepath)
+    except FileNotFoundError:
+        metadata = deepcopy(new_metadata)
+
+    subparser = kwargs.pop("metadata_subparser")
+    if subparser == "get":
+        return s_lib.component_metadata_schema.validate(metadata)
+    else:
+        raise c_lib.ComponentError(
+            "The metadata subparser '{sp}' is not recognised.".format(
                 sp=subparser,
             )
         )
@@ -422,6 +443,18 @@ def parse_args(args):
         choices=["release", "registration"],
     )
 
+    metadata_parser = subparsers.add_parser("metadata")
+    metadata_parser.add_argument("--metadata-dir", default="./")
+
+    metadata_subparsers = metadata_parser.add_subparsers(
+        dest="metadata_subparser")
+    metadata_subparsers.required = True
+
+    metadata_get_parser = metadata_subparsers.add_parser(
+        "get",
+        help="Validate the output the component metadata.",
+    )
+
     return vars(parser.parse_args(args))
 
 
@@ -449,6 +482,8 @@ def main():
             resp = dependency(components_dir, **kwargs)
         elif subparser == "compare":
             resp = compare(releases_dir, components_dir, **kwargs)
+        elif subparser == "metadata":
+            resp = metadata(components_dir, **kwargs)
         else:
             raise c_lib.ComponentError(
                 "The subparser '{sp}' is not recognised.".format(sp=subparser)
