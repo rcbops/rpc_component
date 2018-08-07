@@ -56,3 +56,9 @@ component --releases-dir . compare --from <sha1> --to <sha2> --verify release
 cd rpc-metadata
 component --releases-dir . release --component-name rpc-product-1 get --version r1.0.0 --pred
 ```
+
+#### Verify and get component metadata
+
+```
+component metadata get
+```

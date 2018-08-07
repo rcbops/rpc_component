@@ -1,3 +1,4 @@
+from collections import ChainMap
 from functools import partial
 import re
 
@@ -134,9 +135,9 @@ component_schema = Schema(
     }
 )
 
-component_metadata_schema = Schema(
+dependencies_schema = Schema(
     {
-        "dependencies": And(
+        Optional("dependencies"): And(
             [
                 {
                     "name": And(str, len),
@@ -144,8 +145,46 @@ component_metadata_schema = Schema(
                 },
             ],
             is_value_unique("name"),
-        ),
+        )
     }
+)
+
+artifacts_file_schema = Schema(
+    {
+        "type": "file",
+        "source": And(str, len),
+        Optional("dest"): And(str, len),
+        Optional("expire_after"): And(int, lambda n: n > 0)
+    }
+)
+
+artifacts_log_schema = Schema(
+    {
+        "type": "log",
+        "source": And(str, len)
+    }
+)
+
+artifacts_schema = Schema(
+    {
+        Optional("artifacts"):
+            [
+                Or(artifacts_file_schema, artifacts_log_schema)
+            ]
+    }
+)
+
+component_metadata_schema = Schema(
+    dict(
+        ChainMap(
+            *(s._schema for s in
+                (
+                    dependencies_schema,
+                    artifacts_schema,
+                )
+              )
+        )
+    )
 )
 
 component_requirements_schema = Schema(

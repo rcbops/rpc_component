@@ -7,7 +7,7 @@ if sys.version_info < (3, 2) and "install" in str(sys.argv):
 
 setup(
     name='rpc_component',
-    version='0.0.0',
+    version='0.0.1',
     description='Tools for managing RPC components.',
     python_requires='>=3.2',
     install_requires=['GitPython', 'PyYAML', 'schema'],
