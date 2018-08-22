@@ -56,6 +56,16 @@ class TestUpdateRequirements(unittest.TestCase):
                     "series": "first",
                 },
                 {
+                    "version": "2.0.0-rc.1",
+                    "sha": "0000000000000000000000000000000000000007",
+                    "series": "first",
+                },
+                {
+                    "version": "2.0.0-rc.2",
+                    "sha": "0000000000000000000000000000000000000007",
+                    "series": "first",
+                },
+                {
                     "version": "2.0.0",
                     "sha": "0000000000000000000000000000000000000008",
                     "series": "first",
@@ -79,6 +89,10 @@ class TestUpdateRequirements(unittest.TestCase):
             {
                 "constraints": ["version<2.0.0-beta.1"],
                 "expected_version": "2.0.0-alpha.1"
+            },
+            {
+                "constraints": ["version<2.0.0-rc.2"],
+                "expected_version": "2.0.0-rc.1"
             },
         )
         for test_case in constraints_test_cases:
