@@ -36,8 +36,8 @@ version_regex = (
     r"(?P<major>[0-9]+)\."
     r"(?P<minor>[0-9]+)\."
     r"(?P<patch>[0-9]+)"
-    r"(-(?P<a_or_b>alpha|beta)\."
-    r"(?P<a_b_version>[0-9]+))?)$"
+    r"(-(?P<prerelease>alpha|beta|rc)\."
+    r"(?P<prerelease_version>[0-9]+))?)$"
 )
 
 version_id_schema = Regex(version_regex)
@@ -81,8 +81,8 @@ constraint_regex = (
     r"(?P<version>r?(?P<major>[0-9]+)"
     r"(\.(?P<minor>[0-9]+)"
     r"(\.(?P<patch>[0-9]+)"
-    r"(-(?P<a_or_b>alpha|beta)\."
-    r"(?P<a_b_version>[0-9]+))?)?)?)"
+    r"(-(?P<prerelease>alpha|beta|rc)\."
+    r"(?P<prerelease_version>[0-9]+))?)?)?)"
 )
 version_constraint_regex = r"^version{op}{version}$".format(
     op=comparison_operator_regex,
@@ -219,10 +219,11 @@ comparison_added_component_schema = Schema(
 
 
 def _version_key(version_id, regex=None):
-    a_b_map = {
+    prerelease_map = {
         "alpha": 0,
         "beta": 1,
-        None: 2,
+        "rc": 2,
+        None: 3,
     }
 
     def int_or_none(x): return x if x is None else int(x)
@@ -231,10 +232,10 @@ def _version_key(version_id, regex=None):
     major = int(v.group("major"))
     minor = int_or_none(v.group("minor"))
     patch = int_or_none(v.group("patch"))
-    a_or_b = a_b_map[v.group("a_or_b")]
-    a_b_version = int(v.group("a_b_version") or 0)
+    prerelease = prerelease_map[v.group("prerelease")]
+    prerelease_version = int(v.group("prerelease_version") or 0)
 
-    return (major, minor, patch, a_or_b, a_b_version)
+    return (major, minor, patch, prerelease, prerelease_version)
 
 
 version_key = partial(_version_key, regex=version_regex)
