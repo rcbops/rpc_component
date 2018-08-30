@@ -201,11 +201,7 @@ def dependency(components_dir, **kwargs):
     metadata_filename = "component_metadata.yml"
     filepath = os.path.join(dependency_dir, metadata_filename)
     new_metadata = {"artifacts": [], "dependencies": []}
-    try:
-        metadata = c_lib.load_data(filepath)
-    except FileNotFoundError:
-        metadata = deepcopy(new_metadata)
-    metadata = s_lib.component_metadata_schema.validate(metadata)
+    metadata = get_metadata(components_dir)
 
     subparser = kwargs.pop("dependency_subparser")
     if subparser == "set-dependency":
@@ -242,19 +238,42 @@ def dependency(components_dir, **kwargs):
         )
 
 
-def metadata(components_dir, **kwargs):
-    metadata_dir = kwargs.pop("metadata_dir")
+def dependents(my_component_name, download_dir, releases_dir, components_dir):
+    dependents_list = []
+    components = c_lib.load_all_components(components_dir, releases_dir)
+    for component in components:
+        if len(component.releases) > 0:
+            series_list = []
+            for release in component.releases:
+                if release.series not in series_list:
+                    series_list.append(release.series)
+                    component_parameters = [{"name": component.name, "repo_url": component.repo_url,
+                                             "series": release.series, "sha": None}]
+                    c_lib.download_components(component_parameters, download_dir)
+                    dep_component_dir = os.path.join(download_dir, component.name)
+                    metadata = get_metadata(dep_component_dir)
+                    if metadata:
+                        for dependency in metadata['dependencies']:
+                            if dependency['name'] == my_component_name:
+                                dependents_list.append(component)
+    return dependents_list
+
+
+def get_metadata(metadata_dir):
     metadata_filename = "component_metadata.yml"
     filepath = os.path.join(metadata_dir, metadata_filename)
-    new_metadata = {"artifacts": [], "dependencies": []}
     try:
         metadata = c_lib.load_data(filepath)
     except FileNotFoundError:
-        metadata = deepcopy(new_metadata)
+        metadata = {"artifacts": [], "dependencies": []}
+    return s_lib.component_metadata_schema.validate(metadata)
 
+
+def metadata(components_dir, **kwargs):
+    metadata_dir = kwargs.pop("metadata_dir")
     subparser = kwargs.pop("metadata_subparser")
     if subparser == "get":
-        return s_lib.component_metadata_schema.validate(metadata)
+        return get_metadata(metadata_dir)
     else:
         raise c_lib.ComponentError(
             "The metadata subparser '{sp}' is not recognised.".format(
@@ -395,7 +414,11 @@ def parse_args(args):
     )
 
     dep_parser = subparsers.add_parser("dependency")
-    dep_parser.add_argument("--dependency-dir", default="./")
+    dep_parser.add_argument(
+        "--dependency-dir",
+        default="./",
+        help="The repo path where component_requirements.yml is located (default=./)"
+    )
 
     dep_subparsers = dep_parser.add_subparsers(dest="dependency_subparser")
     dep_subparsers.required = True
@@ -425,7 +448,27 @@ def parse_args(args):
     )
 
     dl_parser = dep_subparsers.add_parser("download-requirements")
-    dl_parser.add_argument("--download-dir", default="./")
+    dl_parser.add_argument(
+        "--download-dir",
+        default="./",
+        help="The dependency component repo is cloned to this path (default=./)"
+    )
+
+    dt_parser = subparsers.add_parser("dependents")
+    dt_parser.add_argument(
+        "--component-name",
+        required=True,
+        help="The component name"
+    )
+    dt_parser.add_argument(
+        "--download-dir",
+        default="./",
+        help="Path to clone component repos while checking for dependents (default=./)"
+    )
+
+    dt_subparsers = dt_parser.add_subparsers(dest="dependents_subparser")
+    dt_subparsers.required = True
+    gdt_parser = dt_subparsers.add_parser("get")
 
     com_parser = subparsers.add_parser("compare")
     com_parser.add_argument(
@@ -452,7 +495,7 @@ def parse_args(args):
 
     metadata_get_parser = metadata_subparsers.add_parser(
         "get",
-        help="Validate the output the component metadata.",
+        help="Validate the output from the component metadata.",
     )
 
     return vars(parser.parse_args(args))
@@ -480,6 +523,8 @@ def main():
             resp = release(releases_dir, components_dir, **kwargs)
         elif subparser == "dependency":
             resp = dependency(components_dir, **kwargs)
+        elif subparser == "dependents":
+            resp = dependents(kwargs["component_name"], kwargs["download_dir"], releases_dir, components_dir)
         elif subparser == "compare":
             resp = compare(releases_dir, components_dir, **kwargs)
         elif subparser == "metadata":
