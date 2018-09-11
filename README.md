@@ -57,6 +57,13 @@ cd rpc-metadata
 component --releases-dir . release --component-name rpc-product-1 get --version r1.0.0 --pred
 ```
 
+#### Display components that are dependent
+
+```
+cd rpc-product-1
+component --releases-dir=../rpc-metadata dependents --component-name rpc-product-1
+```
+
 #### Verify and get component metadata
 
 ```

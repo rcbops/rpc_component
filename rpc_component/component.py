@@ -267,20 +267,22 @@ def save_data(filepath, data, old_filepath=None, header=None):
         os.remove(old_filepath)
 
 
-def load_all_components(component_dir, repo_dir, commitish):
+def load_all_components(component_dir, repo_dir, commitish=None):
     repo = git.Repo(repo_dir)
     start_ref = repo.head.commit
 
-    repo.head.reference = repo.commit(commitish)
-    repo.head.reset(index=True, working_tree=True)
+    if commitish:
+        repo.head.reference = repo.commit(commitish)
+        repo.head.reset(index=True, working_tree=True)
 
     components = []
     for cf in os.listdir(component_dir):
         name = cf[:-4]
         components.append(Component.from_file(name, component_dir))
 
-    repo.head.reference = repo.commit(start_ref)
-    repo.head.reset(index=True, working_tree=True)
+    if commitish:
+        repo.head.reference = repo.commit(start_ref)
+        repo.head.reset(index=True, working_tree=True)
 
     return components
 
@@ -449,6 +451,23 @@ def download_requirements(requirements, dl_base_dir):
 
         repo.head.reference = repo.commit(requirement["sha"])
         repo.head.reset(index=True, working_tree=True)
+
+
+def download_components(components, dl_base_dir):
+    for component in components:
+        repo_dir = os.path.join(dl_base_dir, component["name"])
+        try:
+            repo = git.Repo(repo_dir)
+        except git.exc.NoSuchPathError:
+            repo = git.Repo.clone_from(component["repo_url"], repo_dir)
+        else:
+            repo.remote("origin").fetch()
+
+        if component["sha"]:
+            repo.head.reference = repo.commit(component["sha"])
+            repo.head.reset(index=True, working_tree=True)
+        elif component["series"]:
+            repo.git.checkout(component["series"])
 
 
 def commit_changes(repo_dir, files, message):
