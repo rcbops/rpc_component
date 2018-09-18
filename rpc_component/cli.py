@@ -201,7 +201,7 @@ def dependency(components_dir, **kwargs):
     metadata_filename = "component_metadata.yml"
     filepath = os.path.join(dependency_dir, metadata_filename)
     new_metadata = {"artifacts": [], "dependencies": []}
-    metadata = get_metadata(components_dir)
+    metadata = get_metadata(dependency_dir)
 
     subparser = kwargs.pop("dependency_subparser")
     if subparser == "set-dependency":
