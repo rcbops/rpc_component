@@ -41,6 +41,13 @@ cd rpc-metadata
 component --releases-dir=. release --component-name rpc-product-1 add --version r1.0.0 --sha e1d1b2348d9eaae3e5a2217372f97a5144b63355 --series-name master
 ```
 
+#### Add a component artefact store
+
+```
+cd rpc-metadata
+component --releases-dir . artifact-store --component-name rpc-product-1 add --name release-artifacts --type file --public-url https://example.com/ --description 'rpc-product-1 release artefacts'
+```
+
 ## Querying Components
 
 #### Verify the addition of release between <sha1> and <sha2> is valid
@@ -68,4 +75,11 @@ component --releases-dir=../rpc-metadata dependents --component-name rpc-product
 
 ```
 component metadata get
+```
+
+#### Display a component artefact store
+
+```
+cd rpc-metadata
+component --releases-dir . artifact-store --component-name rpc-product-1 get --name release-artifacts
 ```

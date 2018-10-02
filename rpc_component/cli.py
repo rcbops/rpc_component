@@ -126,6 +126,39 @@ def release(releases_dir, components_dir, **kwargs):
     return release
 
 
+def artifact_store(releases_dir, components_dir, **kwargs):
+    component_name = kwargs.pop("component_name")
+    subparser = kwargs.pop("artifact_store_subparser")
+    component = c_lib.Component.from_file(
+        component_name, components_dir
+    )
+    if subparser == "get":
+        store = component.get_artifact_store(kwargs["name"])
+    elif subparser == "add":
+        store = component.add_artifact_store(
+            name=kwargs["name"],
+            store_type=kwargs["type"],
+            public_url=kwargs["public_url"],
+            description=kwargs["description"],
+        )
+
+        if component._is_changed:
+            component.to_file()
+            msg = "Add component {name} artifact store {store_name}".format(
+                name=component.name,
+                store_name=store["name"],
+            )
+            c_lib.commit_changes(releases_dir, components_dir, msg)
+    else:
+        raise c_lib.ComponentError(
+            "The artifact-store subparser '{sp}' is not recognised.".format(
+                sp=subparser,
+            )
+        )
+
+    return store
+
+
 def compare(releases_dir, components_dir, **kwargs):
     from_ = c_lib.load_all_components(
         components_dir, releases_dir, kwargs["from"]
@@ -413,6 +446,44 @@ def parse_args(args):
         help="The name of the major release to which the version belongs.",
     )
 
+    as_parser = subparsers.add_parser("artifact-store")
+    as_parser.add_argument(
+        "--component-name",
+        required=True,
+        help="The component name.",
+    )
+    as_subparser = as_parser.add_subparsers(dest="artifact_store_subparser")
+    as_subparser.required = True
+
+    asg_parser = as_subparser.add_parser("get")
+    asg_parser.add_argument(
+        "--name",
+        help="Artifact store name.",
+        required=True,
+    )
+
+    asa_parser = as_subparser.add_parser("add")
+    asa_parser.add_argument(
+        "--name",
+        help="Artifact store name.",
+        required=True,
+    )
+    asa_parser.add_argument(
+        "--type",
+        help="Artifact store type.",
+        required=True,
+    )
+    asa_parser.add_argument(
+        "--public-url",
+        default=None,
+        help="Publicly accessible URL for artifact store.",
+    )
+    asa_parser.add_argument(
+        "--description",
+        default=None,
+        help="Description of the artifact store.",
+    )
+
     dep_parser = subparsers.add_parser("dependency")
     dep_parser.add_argument(
         "--dependency-dir",
@@ -521,6 +592,8 @@ def main():
             )
         elif subparser == "release":
             resp = release(releases_dir, components_dir, **kwargs)
+        elif subparser == "artifact-store":
+            resp = artifact_store(releases_dir, components_dir, **kwargs)
         elif subparser == "dependency":
             resp = dependency(components_dir, **kwargs)
         elif subparser == "dependents":

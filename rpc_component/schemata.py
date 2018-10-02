@@ -109,6 +109,17 @@ component_single_version_schema = Schema(
             "version": version_id_schema,
             "sha": version_sha_schema,
         },
+        Optional("artifact_stores", default=[]): And(
+            [
+                {
+                    "description": Or(str, None),
+                    "name": And(str, len),
+                    "public_url": And(str, len),
+                    "type": And(str, len),
+                },
+            ],
+            is_value_unique("name"),
+        ),
     }
 )
 
@@ -131,6 +142,17 @@ component_schema = Schema(
             ],
             is_value_unique("series"),
             is_version_ids_unique,
+        ),
+        Optional("artifact_stores", default=[]): And(
+            [
+                {
+                    "description": Or(str, None),
+                    "name": And(str, len),
+                    "public_url": And(str, len),
+                    "type": And(str, len),
+                },
+            ],
+            is_value_unique("name"),
         ),
     }
 )
