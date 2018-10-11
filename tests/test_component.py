@@ -148,6 +148,7 @@ class TestRelease(unittest.TestCase):
         )
 
         expected = {
+            "artifact_stores": [],
             "is_product": False,
             "name": "test1",
             "release": {
@@ -171,6 +172,7 @@ class TestRelease(unittest.TestCase):
         release_yaml = yaml.dump(release, default_flow_style=False)
 
         expected = (
+            "artifact_stores: []\n"
             "is_product: false\n"
             "name: test1\n"
             "release:\n"
@@ -368,6 +370,7 @@ class TestComponent(unittest.TestCase):
         )
 
         expected = {
+            "artifact_stores": [],
             "is_product": False,
             "name": "test1",
             "releases": [
@@ -403,6 +406,7 @@ class TestComponent(unittest.TestCase):
         component_yaml = yaml.dump(component, default_flow_style=False)
 
         expected = (
+            "artifact_stores: []\n"
             "is_product: false\n"
             "name: test1\n"
             "releases:\n"

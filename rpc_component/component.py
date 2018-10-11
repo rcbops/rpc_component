@@ -25,7 +25,8 @@ class Component(yaml.YAMLObject):
     schema = component_schema
 
     def __init__(
-            self, name, repo_url, is_product, releases=None, directory=None
+            self, name, repo_url, is_product, releases=None, directory=None,
+            artifact_stores=None,
             ):
         self.name = name
         self.repo_url = repo_url
@@ -35,6 +36,7 @@ class Component(yaml.YAMLObject):
             self.create_release(**release)
         self.directory = directory
         self._orig_state = None
+        self.artifact_stores = artifact_stores or []
 
     def create_release(self, version, sha, series):
         release = Release(self, version, sha, series)
@@ -128,6 +130,24 @@ class Component(yaml.YAMLObject):
             return diff
         return _difference(self.to_dict(), other.to_dict())
 
+    def get_artifact_store(self, name):
+        for store in self.artifact_stores:
+            if store["name"] == name:
+                return store
+        raise ComponentError(
+            "Artifact store with name {n} not found.".format(n=name)
+        )
+
+    def add_artifact_store(self, name, store_type, public_url, description):
+        store = {
+            "name": name,
+            "type": store_type,
+            "public_url": public_url,
+            "description": description,
+        }
+        self.artifact_stores.append(store)
+        return store
+
     @property
     def _is_changed(self):
         current_state = vars(self).copy()
@@ -147,6 +167,7 @@ class Component(yaml.YAMLObject):
                 }
                 for s, vs in groupby(self.releases, attrgetter("series"))
             ],
+            "artifact_stores": self.artifact_stores,
         }
         return self.schema.validate(component)
 

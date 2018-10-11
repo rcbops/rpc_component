@@ -19,6 +19,7 @@ from rpc_component import schemata as s_lib
 def component(releases_dir, components_dir, subparser, **kwargs):
     os.makedirs(components_dir, exist_ok=True)
     component_name = kwargs.pop("component_name")
+    commit_changes = kwargs.pop("commit_changes")
 
     if subparser == "get":
         component = c_lib.Component.from_file(
@@ -82,8 +83,8 @@ def component(releases_dir, components_dir, subparser, **kwargs):
             )
         )
 
-    if component._is_changed:
-        component.to_file()
+    component.to_file()
+    if commit_changes and component._is_changed:
         msg = "{change} component {name}".format(
             change=subparser.capitalize(),
             name=component.name,
@@ -96,6 +97,7 @@ def component(releases_dir, components_dir, subparser, **kwargs):
 
 def release(releases_dir, components_dir, **kwargs):
     component_name = kwargs.pop("component_name")
+    commit_changes = kwargs.pop("commit_changes")
     subparser = kwargs.pop("release_subparser")
     component = c_lib.Component.from_file(
         component_name, components_dir
@@ -109,8 +111,8 @@ def release(releases_dir, components_dir, **kwargs):
             series=kwargs["series_name"]
         )
 
-        if component._is_changed:
-            component.to_file()
+        component.to_file()
+        if commit_changes and component._is_changed:
             msg = "Add component {name} release {version}".format(
                 name=component.name,
                 version=release.version,
@@ -124,6 +126,40 @@ def release(releases_dir, components_dir, **kwargs):
         )
 
     return release
+
+
+def artifact_store(releases_dir, components_dir, **kwargs):
+    component_name = kwargs.pop("component_name")
+    commit_changes = kwargs.pop("commit_changes")
+    subparser = kwargs.pop("artifact_store_subparser")
+    component = c_lib.Component.from_file(
+        component_name, components_dir
+    )
+    if subparser == "get":
+        store = component.get_artifact_store(kwargs["name"])
+    elif subparser == "add":
+        store = component.add_artifact_store(
+            name=kwargs["name"],
+            store_type=kwargs["type"],
+            public_url=kwargs["public_url"],
+            description=kwargs["description"],
+        )
+
+        component.to_file()
+        if commit_changes and component._is_changed:
+            msg = "Add component {name} artifact store {store_name}".format(
+                name=component.name,
+                store_name=store["name"],
+            )
+            c_lib.commit_changes(releases_dir, components_dir, msg)
+    else:
+        raise c_lib.ComponentError(
+            "The artifact-store subparser '{sp}' is not recognised.".format(
+                sp=subparser,
+            )
+        )
+
+    return store
 
 
 def compare(releases_dir, components_dir, **kwargs):
@@ -198,6 +234,7 @@ def compare(releases_dir, components_dir, **kwargs):
 
 def dependency(components_dir, **kwargs):
     dependency_dir = kwargs.pop("dependency_dir")
+    commit_changes = kwargs.pop("commit_changes")
     metadata_filename = "component_metadata.yml"
     filepath = os.path.join(dependency_dir, metadata_filename)
     new_metadata = {"artifacts": [], "dependencies": []}
@@ -211,20 +248,22 @@ def dependency(components_dir, **kwargs):
                 filepath,
                 s_lib.component_metadata_schema.validate(data)
             )
-            msg = "Set component dependency {name}".format(
-                name=kwargs["name"],
-            )
+            if commit_changes:
+                msg = "Set component dependency {name}".format(
+                    name=kwargs["name"],
+                )
 
-            c_lib.commit_changes(dependency_dir, metadata_filename, msg)
+                c_lib.commit_changes(dependency_dir, metadata_filename, msg)
     elif subparser == "update-requirements":
         existing_requirements = c_lib.load_requirements(dependency_dir)
         requirements = c_lib.update_requirements(metadata, components_dir)
         if existing_requirements != requirements:
             c_lib.save_requirements(requirements, dependency_dir)
-            msg = "Update component dependency requirements"
-            c_lib.commit_changes(
-                dependency_dir, c_lib.REQUIREMENTS_FILENAME, msg
-            )
+            if commit_changes:
+                msg = "Update component dependency requirements"
+                c_lib.commit_changes(
+                    dependency_dir, c_lib.REQUIREMENTS_FILENAME, msg
+                )
     elif subparser == "download-requirements":
         requirements = c_lib.load_requirements(dependency_dir)
         c_lib.download_requirements(
@@ -313,6 +352,15 @@ def parse_args(args):
         help=(
                 "The repository to clone if `--releases-dir` is not specified "
                 "and no previous clone exists."
+        ),
+    )
+    parser.add_argument(
+        "--no-commit-changes",
+        default=False,
+        action="store_true",
+        help=(
+            "Do not commit any changes to RELEASES_REPO when adding or "
+            "updating a component."
         ),
     )
 
@@ -413,6 +461,44 @@ def parse_args(args):
         help="The name of the major release to which the version belongs.",
     )
 
+    as_parser = subparsers.add_parser("artifact-store")
+    as_parser.add_argument(
+        "--component-name",
+        required=True,
+        help="The component name.",
+    )
+    as_subparser = as_parser.add_subparsers(dest="artifact_store_subparser")
+    as_subparser.required = True
+
+    asg_parser = as_subparser.add_parser("get")
+    asg_parser.add_argument(
+        "--name",
+        help="Artifact store name.",
+        required=True,
+    )
+
+    asa_parser = as_subparser.add_parser("add")
+    asa_parser.add_argument(
+        "--name",
+        help="Artifact store name.",
+        required=True,
+    )
+    asa_parser.add_argument(
+        "--type",
+        help="Artifact store type.",
+        required=True,
+    )
+    asa_parser.add_argument(
+        "--public-url",
+        default=None,
+        help="Publicly accessible URL for artifact store.",
+    )
+    asa_parser.add_argument(
+        "--description",
+        default=None,
+        help="Description of the artifact store.",
+    )
+
     dep_parser = subparsers.add_parser("dependency")
     dep_parser.add_argument(
         "--dependency-dir",
@@ -505,6 +591,7 @@ def main():
     raw_args = sys.argv[1:]
     try:
         kwargs = parse_args(raw_args)
+        kwargs["commit_changes"] = not kwargs.pop("no_commit_changes")
 
         subparser = kwargs.pop("subparser")
 
@@ -521,6 +608,8 @@ def main():
             )
         elif subparser == "release":
             resp = release(releases_dir, components_dir, **kwargs)
+        elif subparser == "artifact-store":
+            resp = artifact_store(releases_dir, components_dir, **kwargs)
         elif subparser == "dependency":
             resp = dependency(components_dir, **kwargs)
         elif subparser == "dependents":
