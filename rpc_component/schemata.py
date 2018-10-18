@@ -239,6 +239,30 @@ comparison_added_component_schema = Schema(
     )
 )
 
+comparison_added_artifact_stores_schema = Schema(
+    And(
+        {
+            And(str, len): {
+                "added": {
+                    "artifact_stores": And(
+                        [
+                            {
+                                "description": Or(str, None),
+                                "name": And(str, len),
+                                "public_url": And(str, len),
+                                "type": And(str, len),
+                            },
+                        ],
+                        is_value_unique("name"),
+                    ),
+                },
+                "deleted": {},
+            }
+        },
+        lambda s: len(s) == 1,
+    )
+)
+
 
 def _version_key(version_id, regex=None):
     prerelease_map = {
