@@ -226,6 +226,23 @@ def compare(releases_dir, components_dir, **kwargs):
             name, _ = comparison.popitem()
             component = [c for c in to if c.name == name][0]
             output = component
+    elif kwargs["verify"] == "artifact-store":
+        try:
+            s_lib.comparison_added_artifact_stores_schema.validate(comparison)
+        except SchemaError as e:
+            raise c_lib.ComponentError(
+                "The changes from `{f}` to `{t}` do not represent the "
+                "addition of one or more new artifact stores.\nValidation "
+                "error:\n{e}\nChanges found:\n{c}".format(
+                    f=kwargs["from"],
+                    t=kwargs["to"],
+                    e=e,
+                    c=comparison_yaml,
+                )
+            )
+        else:
+            _, data = comparison.popitem()
+            output = data["added"]
     else:
         output = comparison
 
@@ -569,7 +586,7 @@ def parse_args(args):
     )
     com_parser.add_argument(
         "--verify",
-        choices=["release", "registration"],
+        choices=["release", "registration", "artifact-store"],
     )
 
     metadata_parser = subparsers.add_parser("metadata")
