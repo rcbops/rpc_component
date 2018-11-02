@@ -196,6 +196,14 @@ artifacts_schema = Schema(
     }
 )
 
+jenkins_schema = Schema(
+    {
+        Optional("jenkins"): {
+            Optional("jjb_paths"): [And(str, len)],
+        }
+    }
+)
+
 component_metadata_schema = Schema(
     dict(
         ChainMap(
@@ -203,6 +211,7 @@ component_metadata_schema = Schema(
                 (
                     dependencies_schema,
                     artifacts_schema,
+                    jenkins_schema,
                 )
               )
         )

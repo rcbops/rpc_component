@@ -321,7 +321,7 @@ def get_metadata(metadata_dir):
     try:
         metadata = c_lib.load_data(filepath)
     except FileNotFoundError:
-        metadata = {"artifacts": [], "dependencies": []}
+        metadata = {"artifacts": [], "dependencies": [], "jenkins": {}}
     return s_lib.component_metadata_schema.validate(metadata)
 
 
