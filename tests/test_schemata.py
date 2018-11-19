@@ -289,7 +289,7 @@ class TestSchemaValidation(unittest.TestCase):
                 },
             ]
         }
-        with_deps_and_artifacts = {
+        with_all = {
             "dependencies": [
                 {
                     "name": "dep0",
@@ -313,7 +313,13 @@ class TestSchemaValidation(unittest.TestCase):
                     "type": "log",
                     "source": "/foo"
                 },
-            ]
+            ],
+            "jenkins": {
+                "jjb_paths": [
+                    "foo",
+                    "bar",
+                ],
+            },
         }
 
         self.assertTrue(
@@ -383,7 +389,7 @@ class TestSchemaValidation(unittest.TestCase):
         )
         self.assertTrue(
             schemata.component_metadata_schema.validate(
-                with_deps_and_artifacts)
+                with_all)
         )
 
     def test_component_schema(self):
